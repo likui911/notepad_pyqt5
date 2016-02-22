@@ -25,7 +25,7 @@ class Notepad(QtWidgets.QMainWindow):
         # 系统剪切板
         self.clipboard = QtWidgets.QApplication.clipboard()
         self.config = configparser.ConfigParser()
-        self.config.read(CONFIG_FILE_PATH,'utf-8')
+        self.config.read(CONFIG_FILE_PATH, 'utf-8')
         super(QtWidgets.QMainWindow, self).__init__()
         self.initUI()
 
@@ -74,7 +74,7 @@ class Notepad(QtWidgets.QMainWindow):
     def judgeConfig(self):
         # 如果配置文件不存在，则新建
         if not os.path.exists(CONFIG_FILE_PATH):
-            f = open(CONFIG_FILE_PATH, 'w',encoding='utf-8')
+            f = open(CONFIG_FILE_PATH, 'w', encoding='utf-8')
             f.close()
 
     def readSettings(self):
@@ -86,9 +86,11 @@ class Notepad(QtWidgets.QMainWindow):
         self.move(int(px), int(py))
         self.resize(int(width), (height))
 
-        wrap = self.getConfig('Setting','wrap',4)
         self.default_dir = self.getConfig('Setting', 'dir', '')
-        self.text.setLineWrapMode(int(wrap))
+        font_family = self.getConfig('Font','family','Consolas')
+        font_size = self.getConfig('Font','size',10)
+        font = QtGui.QFont(font_family,font_size)
+        self.text.setFont(font)
 
 
     def writeSetting(self):
@@ -99,11 +101,12 @@ class Notepad(QtWidgets.QMainWindow):
         self.writeConfig('Display', 'y', str(self.pos().y()))
 
         self.writeConfig('Setting', 'dir', self.default_dir)
-        # todo 有点问题
-        #self.writeConfig('Setting','wrap',self.text.wordWrapMode())
-        print('00')
+        # todo 字体写入有问题
+        #self.writeConfig('Font','family',self.text.font().family())
+        #self.writeConfig('Font','size',self.text.font().pointSize())
+
         # 写入文件
-        self.config.write(open(CONFIG_FILE_PATH, 'w',encoding='utf-8'))
+        self.config.write(open(CONFIG_FILE_PATH, 'w', encoding='utf-8'))
 
     def createMenubar(self):
         fileMenu = QtWidgets.QMenu('文件', self)
@@ -132,7 +135,7 @@ class Notepad(QtWidgets.QMainWindow):
         self.menuBar().addMenu(helpMenu)
 
     def createToolbar(self):
-        toolbar=self.addToolBar('File')
+        toolbar = self.addToolBar('File')
         toolbar.addAction(self.newAction)
         toolbar.addAction(self.openAction)
         toolbar.addAction(self.saveAction)
@@ -189,8 +192,8 @@ class Notepad(QtWidgets.QMainWindow):
                                             triggered=self.close)
         self.lineWrapAction = QtWidgets.QAction(QtGui.QIcon('resource/check.png'), '自动换行', self,
                                                 triggered=self.setLineWrap)
-        self.fontAction = QtWidgets.QAction(QtGui.QIcon('resource/font.png'),'字体',self,
-                                            statusTip = '设置字体',
+        self.fontAction = QtWidgets.QAction(QtGui.QIcon('resource/font.png'), '字体', self,
+                                            statusTip='设置字体',
                                             triggered=self.setFont)
         self.aboutAction = QtWidgets.QAction(QtGui.QIcon('resource/about.png'), '关于', self, statusTip='关于',
                                              triggered=self.about)
@@ -209,7 +212,6 @@ class Notepad(QtWidgets.QMainWindow):
 
     def openFile(self):
         if self.maybeSave():
-            print(self.default_dir)
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, '', self.default_dir, '文本 (*.txt);;所有文件(*.*)')
             file = QtCore.QFile(filename)
             if not file.open(QtCore.QFile.ReadOnly | QtCore.QFile.Text):
@@ -270,14 +272,14 @@ class Notepad(QtWidgets.QMainWindow):
 
     def setLineWrap(self):
         if not self.text.lineWrapMode():
-            self.text.setLineWrapMode(int(QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere))
+            self.text.setLineWrapMode(QtWidgets.QPlainTextEdit.WidgetWidth)
             self.lineWrapAction.setIcon(QtGui.QIcon('resource/check.png'))
         else:
-            self.text.setLineWrapMode(int(QtGui.QTextOption.NoWrap))
+            self.text.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
             self.lineWrapAction.setIcon(QtGui.QIcon(''))
 
     def setFont(self):
-        font,ok = QtWidgets.QFontDialog.getFont(self)
+        font, ok = QtWidgets.QFontDialog.getFont(self)
         if ok:
             self.text.setFont(QtGui.QFont(font))
 
