@@ -10,8 +10,8 @@ from PyQt5 import QtWidgets
    @http://my.oschina.net/upy
 """
 
-CONFIG_FILE_PATH = "resource/notepad.ini"
-# todo 后面可能需要做个判断文件默认编码形式的功能
+CONFIG_FILE_PATH = "notepad.ini"
+
 QtCore.QTextCodec.setCodecForLocale(QtCore.QTextCodec.codecForName("utf-8"))
 
 
@@ -87,11 +87,10 @@ class Notepad(QtWidgets.QMainWindow):
         self.resize(int(width), (height))
 
         self.default_dir = self.getConfig('Setting', 'dir', '')
-        font_family = self.getConfig('Font','family','Consolas')
-        font_size = self.getConfig('Font','size',10)
-        font = QtGui.QFont(font_family,font_size)
+        font_family = self.getConfig('Font', 'family', 'Consolas')
+        font_size = self.getConfig('Font', 'size', 10)
+        font = QtGui.QFont(font_family, int(font_size))
         self.text.setFont(font)
-
 
     def writeSetting(self):
         # 窗口位置信息
@@ -101,9 +100,9 @@ class Notepad(QtWidgets.QMainWindow):
         self.writeConfig('Display', 'y', str(self.pos().y()))
 
         self.writeConfig('Setting', 'dir', self.default_dir)
-        # todo 字体写入有问题
-        #self.writeConfig('Font','family',self.text.font().family())
-        #self.writeConfig('Font','size',self.text.font().pointSize())
+
+        self.writeConfig('Font', 'family', self.text.font().family())
+        self.writeConfig('Font', 'size', str(self.text.font().pointSize()))
 
         # 写入文件
         self.config.write(open(CONFIG_FILE_PATH, 'w', encoding='utf-8'))
@@ -123,6 +122,10 @@ class Notepad(QtWidgets.QMainWindow):
         editMenu.addAction(self.cutAction)
         editMenu.addAction(self.copyAction)
         editMenu.addAction(self.pasteAction)
+        editMenu.addSeparator()
+        editMenu.addAction(self.findAction)
+        editMenu.addAction(self.findNextAction)
+        editMenu.addAction(self.replaceAction)
         styleMenu = QtWidgets.QMenu('格式', self)
         styleMenu.addAction(self.lineWrapAction)
         styleMenu.addAction(self.fontAction)
@@ -145,7 +148,6 @@ class Notepad(QtWidgets.QMainWindow):
         toolbar.addAction(self.pasteAction)
 
     def createActions(self):
-
         self.undoAction = QtWidgets.QAction(QtGui.QIcon('resource/undo.png'), "撤销", self,
                                             shortcut=QtGui.QKeySequence.Undo,
                                             statusTip="撤销编辑",
@@ -197,6 +199,15 @@ class Notepad(QtWidgets.QMainWindow):
                                             triggered=self.setFont)
         self.aboutAction = QtWidgets.QAction(QtGui.QIcon('resource/about.png'), '关于', self, statusTip='关于',
                                              triggered=self.about)
+        self.findAction = QtWidgets.QAction(QtGui.QIcon('resource/find.png'), '查找', self, statusTip='查找',
+                                            shortcut='Ctrl+F',
+                                            triggered=self.findText)
+        self.findNextAction = QtWidgets.QAction(QtGui.QIcon('resource/find.png'), '查找下一个', self, statusTip='查找下一个',
+                                                shortcut='F3',
+                                                triggered=self.findNext)
+        self.replaceAction = QtWidgets.QAction(QtGui.QIcon('resource/replace.png'), '替换', self, statusTip='替换',
+                                               shortcut='Ctrl+H',
+                                               triggered=self.replace)
 
     def closeEvent(self, event):
         if self.maybeSave():
@@ -245,6 +256,16 @@ class Notepad(QtWidgets.QMainWindow):
         except:
             return default
 
+    def findText(self):
+        print('find text')
+        # todo 研究下QTextCursor，考虑下如何实现查找功能
+
+    def findNext(self):
+        print('find next')
+
+    def replace(self):
+        print('replace')
+
     def maybeSave(self):
         # 如果文件有修改，弹出对话框，提示用户是否保存
         if self.text.document().isModified():
@@ -257,7 +278,6 @@ class Notepad(QtWidgets.QMainWindow):
             alert.exec_()
 
             ret = alert.clickedButton()
-
             if ret == saveButton:
                 return self.saveFile()
             elif ret == unSaveButton:
@@ -297,6 +317,7 @@ class Notepad(QtWidgets.QMainWindow):
         # 向config写入信息
         if not self.config.has_section(section):
             self.config.add_section(section)
+        # value必须是str，否则会抛TypeError
         self.config.set(section, key, value)
 
 
