@@ -1,3 +1,4 @@
+import ctypes
 import configparser
 import os
 import sys
@@ -11,7 +12,8 @@ from PyQt5 import QtWidgets
 """
 
 CONFIG_FILE_PATH = "notepad.ini"
-
+# 解决任务栏图标问题
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("notepad")
 QtCore.QTextCodec.setCodecForLocale(QtCore.QTextCodec.codecForName("utf-8"))
 
 
@@ -24,6 +26,13 @@ class Notepad(QtWidgets.QMainWindow):
         self.default_dir = ''
         # 系统剪切板
         self.clipboard = QtWidgets.QApplication.clipboard()
+        # 字体设置
+        self.font_family = 'Consolas'
+        self.font_size = '16'
+        self.font_bold = 'False'
+        self.font_italic = 'False'
+        self.font_strikeOut = 'False'
+        self.font_underline = 'False'
         self.config = configparser.ConfigParser()
         self.config.read(CONFIG_FILE_PATH, 'utf-8')
         super(QtWidgets.QMainWindow, self).__init__()
@@ -87,9 +96,18 @@ class Notepad(QtWidgets.QMainWindow):
         self.resize(int(width), (height))
 
         self.default_dir = self.getConfig('Setting', 'dir', '')
-        font_family = self.getConfig('Font', 'family', 'Consolas')
-        font_size = self.getConfig('Font', 'size', 10)
-        font = QtGui.QFont(font_family, int(font_size))
+
+        self.font_family = self.getConfig('Font', 'family', 'Consolas')
+        self.font_size = self.getConfig('Font', 'size', '10')
+        self.font_bold = self.getConfig('Font','bold','0')
+        self.font_italic = self.getConfig('Font','italic','0')
+        self.font_strikeOut = self.getConfig('Font','strikeOut','0')
+        self.font_underline = self.getConfig('Font','underline','0')
+        font = QtGui.QFont(self.font_family, int(self.font_size))
+        font.setBold(int(self.font_bold))
+        font.setItalic(int(self.font_italic))
+        font.setStrikeOut(int(self.font_strikeOut))
+        font.setUnderline(int(self.font_underline))
         self.text.setFont(font)
 
     def writeSetting(self):
@@ -103,6 +121,10 @@ class Notepad(QtWidgets.QMainWindow):
 
         self.writeConfig('Font', 'family', self.text.font().family())
         self.writeConfig('Font', 'size', str(self.text.font().pointSize()))
+        self.writeConfig('Font','bold',int(self.text.font().bold()))
+        self.writeConfig('Font','italic',int(self.text.font().italic()))
+        self.writeConfig('Font','strikeOut',int(self.text.font().strikeOut()))
+        self.writeConfig('Font','underline',int(self.text.font().underline()))
 
         # 写入文件
         self.config.write(open(CONFIG_FILE_PATH, 'w', encoding='utf-8'))
@@ -126,6 +148,10 @@ class Notepad(QtWidgets.QMainWindow):
         editMenu.addAction(self.findAction)
         editMenu.addAction(self.findNextAction)
         editMenu.addAction(self.replaceAction)
+        # 功能暂时不可用
+        self.findAction.setEnabled(False)
+        self.findNextAction.setEnabled(False)
+        self.replaceAction.setEnabled(False)
         styleMenu = QtWidgets.QMenu('格式', self)
         styleMenu.addAction(self.lineWrapAction)
         styleMenu.addAction(self.fontAction)
@@ -299,7 +325,8 @@ class Notepad(QtWidgets.QMainWindow):
             self.lineWrapAction.setIcon(QtGui.QIcon(''))
 
     def setFont(self):
-        font, ok = QtWidgets.QFontDialog.getFont(self)
+        # 默认选择当前字体
+        font, ok = QtWidgets.QFontDialog.getFont(self.text.font(),self,'字体')
         if ok:
             self.text.setFont(QtGui.QFont(font))
 
@@ -318,11 +345,21 @@ class Notepad(QtWidgets.QMainWindow):
         if not self.config.has_section(section):
             self.config.add_section(section)
         # value必须是str，否则会抛TypeError
-        self.config.set(section, key, value)
+        self.config.set(section, key, str(value))
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
+    translator = QtCore.QTranslator()
+    if len(sys.argv) > 1:
+        locale = sys.argv[1]
+    else:
+        locale = QtCore.QLocale.system().name()
+
+    translator.load('qt_%s' % locale,
+        QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.TranslationsPath))
+    # 切换语言，主要针对系统窗口如字体选择
+    app.installTranslator(translator)
     notepad = Notepad()
     notepad.show()
     app.exec_()
