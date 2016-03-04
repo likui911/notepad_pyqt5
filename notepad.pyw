@@ -26,6 +26,7 @@ class Notepad(QtWidgets.QMainWindow):
         self.default_dir = ''
         # 系统剪切板
         self.clipboard = QtWidgets.QApplication.clipboard()
+        self.last_search = ''
         # 字体设置
         self.font_family = 'Consolas'
         self.font_size = '16'
@@ -99,10 +100,10 @@ class Notepad(QtWidgets.QMainWindow):
 
         self.font_family = self.getConfig('Font', 'family', 'Consolas')
         self.font_size = self.getConfig('Font', 'size', '10')
-        self.font_bold = self.getConfig('Font','bold','0')
-        self.font_italic = self.getConfig('Font','italic','0')
-        self.font_strikeOut = self.getConfig('Font','strikeOut','0')
-        self.font_underline = self.getConfig('Font','underline','0')
+        self.font_bold = self.getConfig('Font', 'bold', '0')
+        self.font_italic = self.getConfig('Font', 'italic', '0')
+        self.font_strikeOut = self.getConfig('Font', 'strikeOut', '0')
+        self.font_underline = self.getConfig('Font', 'underline', '0')
         font = QtGui.QFont(self.font_family, int(self.font_size))
         font.setBold(int(self.font_bold))
         font.setItalic(int(self.font_italic))
@@ -121,10 +122,10 @@ class Notepad(QtWidgets.QMainWindow):
 
         self.writeConfig('Font', 'family', self.text.font().family())
         self.writeConfig('Font', 'size', str(self.text.font().pointSize()))
-        self.writeConfig('Font','bold',int(self.text.font().bold()))
-        self.writeConfig('Font','italic',int(self.text.font().italic()))
-        self.writeConfig('Font','strikeOut',int(self.text.font().strikeOut()))
-        self.writeConfig('Font','underline',int(self.text.font().underline()))
+        self.writeConfig('Font', 'bold', int(self.text.font().bold()))
+        self.writeConfig('Font', 'italic', int(self.text.font().italic()))
+        self.writeConfig('Font', 'strikeOut', int(self.text.font().strikeOut()))
+        self.writeConfig('Font', 'underline', int(self.text.font().underline()))
 
         # 写入文件
         self.config.write(open(CONFIG_FILE_PATH, 'w', encoding='utf-8'))
@@ -149,8 +150,6 @@ class Notepad(QtWidgets.QMainWindow):
         editMenu.addAction(self.findNextAction)
         editMenu.addAction(self.replaceAction)
         # 功能暂时不可用
-        self.findAction.setEnabled(False)
-        self.findNextAction.setEnabled(False)
         self.replaceAction.setEnabled(False)
         styleMenu = QtWidgets.QMenu('格式', self)
         styleMenu.addAction(self.lineWrapAction)
@@ -230,7 +229,7 @@ class Notepad(QtWidgets.QMainWindow):
                                             triggered=self.findText)
         self.findNextAction = QtWidgets.QAction(QtGui.QIcon('resource/find.png'), '查找下一个', self, statusTip='查找下一个',
                                                 shortcut='F3',
-                                                triggered=self.findNext)
+                                                triggered=self.searchText)
         self.replaceAction = QtWidgets.QAction(QtGui.QIcon('resource/replace.png'), '替换', self, statusTip='替换',
                                                shortcut='Ctrl+H',
                                                triggered=self.replace)
@@ -283,14 +282,50 @@ class Notepad(QtWidgets.QMainWindow):
             return default
 
     def findText(self):
-        print('find text')
-        # todo 研究下QTextCursor，考虑下如何实现查找功能
+        self.find_dialog = QtWidgets.QDialog(self)
+        self.find_dialog.setWindowTitle('查找')
+        search_label = QtWidgets.QLabel('查找：')
+        self.search_text = QtWidgets.QLineEdit(self.last_search)
+        search_label.setBuddy(self.search_text)
+        self.search_btn = QtWidgets.QPushButton('查找下一个')
+        self.search_btn.setDefault(True)
 
-    def findNext(self):
-        print('find next')
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(search_label)
+        layout.addWidget(self.search_text)
+        layout.addWidget(self.search_btn)
+
+        self.search_btn.clicked.connect(self.searchText)
+        self.find_dialog.setLayout(layout)
+        self.find_dialog.show()
+
+    def searchText(self):
+        cursor = self.text.textCursor()
+        start = cursor.anchor()
+        text = self.search_text.text()
+        text_len = len(text)
+        context = self.text.toPlainText()
+        # 先在文本中进行查找，判断字符串是否存在
+        index = context.find(text, start)
+        if -1 == index:
+            QtWidgets.QMessageBox.information(self.find_dialog, '记事本', '找不到\"%s\"' % text)
+        else:
+            start = index
+            cursor = self.text.textCursor()
+            cursor.clearSelection()
+            # 上一次查找的字符串
+            self.last_search = text
+            cursor.movePosition(QtGui.QTextCursor.Start, QtGui.QTextCursor.MoveAnchor)
+            # 向右多移动字符串长度
+            cursor.movePosition(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor, start + text_len)
+            # 同时anchor、position同时左移字符串长度
+            cursor.movePosition(QtGui.QTextCursor.Left, QtGui.QTextCursor.KeepAnchor, text_len)
+            cursor.selectedText()
+            self.text.setTextCursor(cursor)
 
     def replace(self):
-        print('replace')
+        # todo 先实现界面
+        pass
 
     def maybeSave(self):
         # 如果文件有修改，弹出对话框，提示用户是否保存
@@ -326,7 +361,7 @@ class Notepad(QtWidgets.QMainWindow):
 
     def setFont(self):
         # 默认选择当前字体
-        font, ok = QtWidgets.QFontDialog.getFont(self.text.font(),self,'字体')
+        font, ok = QtWidgets.QFontDialog.getFont(self.text.font(), self, '字体')
         if ok:
             self.text.setFont(QtGui.QFont(font))
 
@@ -357,9 +392,10 @@ if __name__ == '__main__':
         locale = QtCore.QLocale.system().name()
 
     translator.load('qt_%s' % locale,
-        QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.TranslationsPath))
+                    QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.TranslationsPath))
     # 切换语言，主要针对系统窗口如字体选择
     app.installTranslator(translator)
     notepad = Notepad()
     notepad.show()
     app.exec_()
+# todo 查找下一个F3，初始化为空时特殊处理一下
