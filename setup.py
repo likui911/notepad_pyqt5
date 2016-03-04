@@ -1,10 +1,6 @@
 
 import sys
 from cx_Freeze import setup, Executable
-'''
-    程序打包可支持文件脚本
-    python setup.py build
-'''
 
 base = None
 if sys.platform == 'win32':
