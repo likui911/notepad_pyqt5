@@ -19,7 +19,7 @@ options = {
 }
 
 executables = [
-    Executable('notepad.pyw', base=base)
+    Executable('notepad.pyw', base=base,icon='icon.ico')
 ]
 
 setup(name='notepad',
