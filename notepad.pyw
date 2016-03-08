@@ -58,6 +58,15 @@ class Notepad(QtWidgets.QMainWindow):
         self.text.copyAvailable.connect(self.copyAction.setEnabled)
         self.text.undoAvailable.connect(self.undoAction.setEnabled)
         self.text.redoAvailable.connect(self.redoAction.setEnabled)
+        self.text.textChanged.connect(self.findEnable)
+
+    def findEnable(self):
+        # 当textEdit不为空时，findAction才生效
+        if self.text.toPlainText():
+            self.findAction.setEnabled(True)
+        else:
+            self.findAction.setEnabled(False)
+            self.findNextAction.setEnabled(False)
 
     def createEditText(self):
         self.text = QtWidgets.QPlainTextEdit()
@@ -146,11 +155,15 @@ class Notepad(QtWidgets.QMainWindow):
         editMenu.addAction(self.copyAction)
         editMenu.addAction(self.pasteAction)
         editMenu.addSeparator()
+
+        # 暂时将find、findnex设置为无效，有效时再激活
+        self.findAction.setEnabled(False)
+        self.findNextAction.setEnabled(False)
+
         editMenu.addAction(self.findAction)
         editMenu.addAction(self.findNextAction)
         editMenu.addAction(self.replaceAction)
-        # 功能暂时不可用
-        self.replaceAction.setEnabled(False)
+
         styleMenu = QtWidgets.QMenu('格式', self)
         styleMenu.addAction(self.lineWrapAction)
         styleMenu.addAction(self.fontAction)
@@ -303,6 +316,11 @@ class Notepad(QtWidgets.QMainWindow):
         cursor = self.text.textCursor()
         start = cursor.anchor()
         text = self.search_text.text()
+        # 上一次查找的字符串
+        self.last_search = text
+        # 根据条件判断是否激活findNextAction
+        if self.last_search:
+            self.findNextAction.setEnabled(True)
         text_len = len(text)
         context = self.text.toPlainText()
         # 先在文本中进行查找，判断字符串是否存在
@@ -313,8 +331,6 @@ class Notepad(QtWidgets.QMainWindow):
             start = index
             cursor = self.text.textCursor()
             cursor.clearSelection()
-            # 上一次查找的字符串
-            self.last_search = text
             cursor.movePosition(QtGui.QTextCursor.Start, QtGui.QTextCursor.MoveAnchor)
             # 向右多移动字符串长度
             cursor.movePosition(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor, start + text_len)
@@ -323,9 +339,72 @@ class Notepad(QtWidgets.QMainWindow):
             cursor.selectedText()
             self.text.setTextCursor(cursor)
 
+    def replaceText(self):
+        # todo 替换与查找宽度不同需要多做判断，插入文字后，坐标回退
+        cursor = self.text.textCursor()
+        start = cursor.anchor()
+        text = self.search_text.text()
+        text_len = len(text)
+        context = self.text.toPlainText()
+        index = context.find(text, start)
+        sender = self.sender()
+        # 如果sender是替换按钮，替换选中文字
+        if sender is self.replace_button:
+            if text == cursor.selectedText():
+                cursor.removeSelectedText()
+                replace_text = self.replace_text.text()
+                cursor.insertText(replace_text)
+        if -1 == index:
+            QtWidgets.QMessageBox.information(self.replace_dialog, '记事本', '找不到\"%s\"' % text)
+        else:
+            start = index
+            cursor = self.text.textCursor()
+            cursor.clearSelection()
+            cursor.movePosition(QtGui.QTextCursor.Start, QtGui.QTextCursor.MoveAnchor)
+            cursor.movePosition(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor, start + text_len)
+            cursor.movePosition(QtGui.QTextCursor.Left, QtGui.QTextCursor.KeepAnchor, text_len)
+            cursor.selectedText()
+            self.text.setTextCursor(cursor)
+
     def replace(self):
-        # todo 先实现界面
-        pass
+        self.replace_dialog = QtWidgets.QDialog(self)
+        self.replace_dialog.setWindowTitle('替换')
+        search_label = QtWidgets.QLabel('查找内容：')
+        self.search_text = QtWidgets.QLineEdit()
+        search_label.setBuddy(self.search_text)
+        replace_label = QtWidgets.QLabel('替换为：')
+        # 默认替换为空格
+        self.replace_text = QtWidgets.QLineEdit()
+        replace_label.setBuddy(self.replace_text)
+        self.find_button = QtWidgets.QPushButton('查找下一个')
+        self.replace_button = QtWidgets.QPushButton('替换')
+        self.replace_all_button = QtWidgets.QPushButton('全部替换')
+
+        self.replace_button.setEnabled(False)
+        self.replace_all_button.setEnabled(False)
+
+        self.find_button.clicked.connect(self.replaceText)
+        self.replace_button.clicked.connect(self.replaceText)
+        self.search_text.textChanged.connect(self.replaceEnable)
+
+        layout = QtWidgets.QGridLayout()
+        layout.addWidget(search_label, 0, 0)
+        layout.addWidget(self.search_text, 0, 1)
+        layout.addWidget(self.find_button, 0, 2)
+        layout.addWidget(replace_label, 1, 0)
+        layout.addWidget(self.replace_text, 1, 1)
+        layout.addWidget(self.replace_button, 1, 2)
+        layout.addWidget(self.replace_all_button, 2, 2)
+        self.replace_dialog.setLayout(layout)
+        self.replace_dialog.show()
+
+    def replaceEnable(self):
+        if not self.search_text.text():
+            self.replace_button.setEnabled(False)
+            self.replace_all_button.setEnabled(False)
+        else:
+            self.replace_button.setEnabled(True)
+            self.replace_all_button.setEnabled(True)
 
     def maybeSave(self):
         # 如果文件有修改，弹出对话框，提示用户是否保存
@@ -398,4 +477,3 @@ if __name__ == '__main__':
     notepad = Notepad()
     notepad.show()
     app.exec_()
-# todo 查找下一个F3，初始化为空时特殊处理一下
