@@ -340,7 +340,6 @@ class Notepad(QtWidgets.QMainWindow):
             self.text.setTextCursor(cursor)
 
     def replaceText(self):
-        # todo 替换与查找宽度不同需要多做判断，插入文字后，坐标回退
         cursor = self.text.textCursor()
         start = cursor.anchor()
         text = self.search_text.text()
@@ -351,9 +350,13 @@ class Notepad(QtWidgets.QMainWindow):
         # 如果sender是替换按钮，替换选中文字
         if sender is self.replace_button:
             if text == cursor.selectedText():
+                position = cursor.anchor()
                 cursor.removeSelectedText()
                 replace_text = self.replace_text.text()
                 cursor.insertText(replace_text)
+                # 替换文字后要重新搜索，这个时候cursor还未修改
+                self.replaceText()
+                return
         if -1 == index:
             QtWidgets.QMessageBox.information(self.replace_dialog, '记事本', '找不到\"%s\"' % text)
         else:
@@ -365,6 +368,14 @@ class Notepad(QtWidgets.QMainWindow):
             cursor.movePosition(QtGui.QTextCursor.Left, QtGui.QTextCursor.KeepAnchor, text_len)
             cursor.selectedText()
             self.text.setTextCursor(cursor)
+
+    def replaceAll(self):
+        # 无法撤销，需要做下撤销
+        text = self.search_text.text()
+        replace_text = self.replace_text.text()
+        context = self.text.toPlainText()
+        new_context = context.replace(text, replace_text)
+        self.text.setPlainText(new_context)
 
     def replace(self):
         self.replace_dialog = QtWidgets.QDialog(self)
@@ -385,6 +396,7 @@ class Notepad(QtWidgets.QMainWindow):
 
         self.find_button.clicked.connect(self.replaceText)
         self.replace_button.clicked.connect(self.replaceText)
+        self.replace_all_button.clicked.connect(self.replaceAll)
         self.search_text.textChanged.connect(self.replaceEnable)
 
         layout = QtWidgets.QGridLayout()
