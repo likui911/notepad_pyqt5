@@ -6,6 +6,8 @@ import sys
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
+from PyQt5.QtPrintSupport import QPrintDialog
+from PyQt5.QtPrintSupport import QPrinter
 
 """仿照Windows系统自带记事本(Nodepad)
    @http://my.oschina.net/upy
@@ -146,6 +148,8 @@ class Notepad(QtWidgets.QMainWindow):
         fileMenu.addAction(self.saveAction)
         fileMenu.addAction(self.saveAsAction)
         fileMenu.addSeparator()
+        fileMenu.addAction(self.printAction)
+        fileMenu.addSeparator()
         fileMenu.addAction(self.quitAction)
         editMenu = QtWidgets.QMenu('编辑', self)
         editMenu.addAction(self.undoAction)
@@ -246,6 +250,9 @@ class Notepad(QtWidgets.QMainWindow):
         self.replaceAction = QtWidgets.QAction(QtGui.QIcon('resource/replace.png'), '替换', self, statusTip='替换',
                                                shortcut='Ctrl+H',
                                                triggered=self.replace)
+        self.printAction = QtWidgets.QAction(QtGui.QIcon('resource/print.png'),'打印',self,statusTip='打印',
+                                             shortcut = 'Ctrl+P',
+                                             triggered=self.print)
 
     def closeEvent(self, event):
         if self.maybeSave():
@@ -370,12 +377,21 @@ class Notepad(QtWidgets.QMainWindow):
             self.text.setTextCursor(cursor)
 
     def replaceAll(self):
-        # 无法撤销，需要做下撤销
+        # setPlainText会清空undoredo 历史
         text = self.search_text.text()
         replace_text = self.replace_text.text()
         context = self.text.toPlainText()
         new_context = context.replace(text, replace_text)
         self.text.setPlainText(new_context)
+
+    def print(self):
+        document = self.text.document()
+        printer = QPrinter()
+        dlg = QPrintDialog(printer, self)
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        document.print_(printer)
+        self.statusBar().showMessage("打印成功", 2000)
 
     def replace(self):
         self.replace_dialog = QtWidgets.QDialog(self)

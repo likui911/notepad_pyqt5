@@ -15,6 +15,12 @@
 
 **2016-03-10** 修正了字符串替换的Bug
 
+**2016-03-12** 实现了打印功能
+
+## 存在的问题
+> QPlainTextEdit调用setPlainText会情况undo、redo历史
+> 有可能的话，重写下replaceAll，避免无法撤销的问题。
+
 
 ## 打包可执行文件
 > python setup.py build
