@@ -250,8 +250,8 @@ class Notepad(QtWidgets.QMainWindow):
         self.replaceAction = QtWidgets.QAction(QtGui.QIcon('resource/replace.png'), '替换', self, statusTip='替换',
                                                shortcut='Ctrl+H',
                                                triggered=self.replace)
-        self.printAction = QtWidgets.QAction(QtGui.QIcon('resource/print.png'),'打印',self,statusTip='打印',
-                                             shortcut = 'Ctrl+P',
+        self.printAction = QtWidgets.QAction(QtGui.QIcon('resource/print.png'), '打印', self, statusTip='打印',
+                                             shortcut='Ctrl+P',
                                              triggered=self.print)
 
     def closeEvent(self, event):
@@ -377,12 +377,16 @@ class Notepad(QtWidgets.QMainWindow):
             self.text.setTextCursor(cursor)
 
     def replaceAll(self):
-        # setPlainText会清空undoredo 历史
-        text = self.search_text.text()
-        replace_text = self.replace_text.text()
         context = self.text.toPlainText()
-        new_context = context.replace(text, replace_text)
-        self.text.setPlainText(new_context)
+        search_word = self.search_text.text()
+        replace_word = self.replace_text.text()
+        new_context = context.replace(search_word, replace_word)
+        doc = self.text.document()
+        curs = QtGui.QTextCursor(doc)
+        # 选择整个文档
+        curs.select(QtGui.QTextCursor.Document)
+        # curs.removeSelectedText()
+        curs.insertText(new_context)
 
     def print(self):
         document = self.text.document()
@@ -498,8 +502,7 @@ if __name__ == '__main__':
     else:
         locale = QtCore.QLocale.system().name()
 
-    translator.load('qt_%s' % locale,
-                    QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.TranslationsPath))
+    translator.load('resource/qt_%s.qm' % locale)
     # 切换语言，主要针对系统窗口如字体选择
     app.installTranslator(translator)
     notepad = Notepad()
