@@ -6,7 +6,7 @@ import sys
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
-from PyQt5.QtPrintSupport import QPrintDialog
+from PyQt5.QtPrintSupport import QPrintPreviewDialog
 from PyQt5.QtPrintSupport import QPrinter
 
 """仿照Windows系统自带记事本(Nodepad)
@@ -20,6 +20,7 @@ QtCore.QTextCodec.setCodecForLocale(QtCore.QTextCodec.codecForName("utf-8"))
 
 
 class Notepad(QtWidgets.QMainWindow):
+
     def __init__(self):
         self.judgeConfig()
         # 当前文件名
@@ -135,8 +136,10 @@ class Notepad(QtWidgets.QMainWindow):
         self.writeConfig('Font', 'size', str(self.text.font().pointSize()))
         self.writeConfig('Font', 'bold', int(self.text.font().bold()))
         self.writeConfig('Font', 'italic', int(self.text.font().italic()))
-        self.writeConfig('Font', 'strikeOut', int(self.text.font().strikeOut()))
-        self.writeConfig('Font', 'underline', int(self.text.font().underline()))
+        self.writeConfig('Font', 'strikeOut', int(
+            self.text.font().strikeOut()))
+        self.writeConfig('Font', 'underline', int(
+            self.text.font().underline()))
 
         # 写入文件
         self.config.write(open(CONFIG_FILE_PATH, 'w', encoding='utf-8'))
@@ -149,6 +152,7 @@ class Notepad(QtWidgets.QMainWindow):
         fileMenu.addAction(self.saveAsAction)
         fileMenu.addSeparator()
         fileMenu.addAction(self.printAction)
+        fileMenu.addAction(self.printReviewAction)
         fileMenu.addSeparator()
         fileMenu.addAction(self.quitAction)
         editMenu = QtWidgets.QMenu('编辑', self)
@@ -190,69 +194,44 @@ class Notepad(QtWidgets.QMainWindow):
         toolbar.addAction(self.pasteAction)
 
     def createActions(self):
-        self.undoAction = QtWidgets.QAction(QtGui.QIcon('resource/undo.png'), "撤销", self,
-                                            shortcut=QtGui.QKeySequence.Undo,
-                                            statusTip="撤销编辑",
-                                            triggered=self.text.undo)
-        self.redoAction = QtWidgets.QAction(QtGui.QIcon('resource/redo.png'), '重做', self,
-                                            shortcut=QtGui.QKeySequence.Redo,
-                                            statusTip='重做编辑',
-                                            triggered=self.text.redo)
-        self.cutAction = QtWidgets.QAction(QtGui.QIcon('resource/cut.png'), "剪切", self,
-                                           shortcut=QtGui.QKeySequence.Cut,
-                                           statusTip="剪切选中文本",
-                                           triggered=self.text.cut)
-        self.copyAction = QtWidgets.QAction(QtGui.QIcon('resource/copy.png'), "复制", self,
-                                            shortcut=QtGui.QKeySequence.Copy,
-                                            statusTip="复制选中文本",
-                                            triggered=self.text.copy)
-        self.pasteAction = QtWidgets.QAction(QtGui.QIcon('resource/paste.png'), "粘贴", self,
-                                             shortcut=QtGui.QKeySequence.Paste,
-                                             statusTip="撤销编辑",
-                                             triggered=self.text.paste)
-        self.selectAllAction = QtWidgets.QAction(QtGui.QIcon('resource/SelectAll.png'), "全选", self,
-                                                 shortcut=QtGui.QKeySequence.SelectAll,
-                                                 statusTip="全部选择",
-                                                 triggered=self.text.selectAll)
-        self.newAction = QtWidgets.QAction(QtGui.QIcon('resource/new.png'), '新建', self,
-                                           shortcut=QtGui.QKeySequence.New,
-                                           statusTip='新建文本',
-                                           triggered=self.newFile)
-        self.openAction = QtWidgets.QAction(QtGui.QIcon('resource/open.png'), '打开', self,
-                                            shortcut=QtGui.QKeySequence.Open,
-                                            statusTip='打开文件',
-                                            triggered=self.openFile)
-        self.saveAction = QtWidgets.QAction(QtGui.QIcon('resource/save.png'), '保存', self,
-                                            shortcut=QtGui.QKeySequence.Save,
-                                            statusTip='保存到磁盘',
-                                            triggered=self.saveFile)
-        self.saveAsAction = QtWidgets.QAction(QtGui.QIcon('resource/save.png'), '另存为', self,
-                                              shortcut=QtGui.QKeySequence.SaveAs,
-                                              statusTip='文件另存为',
-                                              triggered=self.saveAsFile)
-        self.quitAction = QtWidgets.QAction(QtGui.QIcon('resource/exit.png'), '退出', self,
-                                            shortcut="Ctrl+Q",
-                                            statusTip='退出',
-                                            triggered=self.close)
-        self.lineWrapAction = QtWidgets.QAction(QtGui.QIcon('resource/check.png'), '自动换行', self,
-                                                triggered=self.setLineWrap)
-        self.fontAction = QtWidgets.QAction(QtGui.QIcon('resource/font.png'), '字体', self,
-                                            statusTip='设置字体',
-                                            triggered=self.setFont)
-        self.aboutAction = QtWidgets.QAction(QtGui.QIcon('resource/about.png'), '关于', self, statusTip='关于',
-                                             triggered=self.about)
-        self.findAction = QtWidgets.QAction(QtGui.QIcon('resource/find.png'), '查找', self, statusTip='查找',
-                                            shortcut='Ctrl+F',
-                                            triggered=self.findText)
-        self.findNextAction = QtWidgets.QAction(QtGui.QIcon('resource/find.png'), '查找下一个', self, statusTip='查找下一个',
-                                                shortcut='F3',
-                                                triggered=self.searchText)
-        self.replaceAction = QtWidgets.QAction(QtGui.QIcon('resource/replace.png'), '替换', self, statusTip='替换',
-                                               shortcut='Ctrl+H',
-                                               triggered=self.replace)
-        self.printAction = QtWidgets.QAction(QtGui.QIcon('resource/print.png'), '打印', self, statusTip='打印',
-                                             shortcut='Ctrl+P',
-                                             triggered=self.print)
+        self.undoAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/undo.png'), "撤销", self, shortcut=QtGui.QKeySequence.Undo, statusTip="撤销编辑", triggered=self.text.undo)
+        self.redoAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/redo.png'), '重做', self, shortcut=QtGui.QKeySequence.Redo, statusTip='重做编辑', triggered=self.text.redo)
+        self.cutAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/cut.png'), "剪切", self, shortcut=QtGui.QKeySequence.Cut, statusTip="剪切选中文本", triggered=self.text.cut)
+        self.copyAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/copy.png'), "复制", self, shortcut=QtGui.QKeySequence.Copy, statusTip="复制选中文本", triggered=self.text.copy)
+        self.pasteAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/paste.png'), "粘贴", self, shortcut=QtGui.QKeySequence.Paste, statusTip="撤销编辑", triggered=self.text.paste)
+        self.selectAllAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/SelectAll.png'), "全选", self, shortcut=QtGui.QKeySequence.SelectAll, statusTip="全部选择", triggered=self.text.selectAll)
+        self.newAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/new.png'), '新建', self, shortcut=QtGui.QKeySequence.New, statusTip='新建文本', triggered=self.newFile)
+        self.openAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/open.png'), '打开', self, shortcut=QtGui.QKeySequence.Open, statusTip='打开文件', triggered=self.openFile)
+        self.saveAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/save.png'), '保存', self, shortcut=QtGui.QKeySequence.Save, statusTip='保存到磁盘', triggered=self.saveFile)
+        self.saveAsAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/save.png'), '另存为', self, shortcut=QtGui.QKeySequence.SaveAs, statusTip='文件另存为', triggered=self.saveAsFile)
+        self.quitAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/exit.png'), '退出', self, shortcut="Ctrl+Q", statusTip='退出', triggered=self.close)
+        self.lineWrapAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/check.png'), '自动换行', self, triggered=self.setLineWrap)
+        self.fontAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/font.png'), '字体', self, statusTip='设置字体', triggered=self.setFont)
+        self.aboutAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/about.png'), '关于', self, statusTip='关于', triggered=self.about)
+        self.findAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/find.png'), '查找', self, statusTip='查找', shortcut='Ctrl+F', triggered=self.findText)
+        self.findNextAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/find.png'), '查找下一个', self, statusTip='查找下一个', shortcut='F3', triggered=self.searchText)
+        self.replaceAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/replace.png'), '替换', self, statusTip='替换', shortcut='Ctrl+H', triggered=self.replace)
+        self.printAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/print.png'), '打印', self, statusTip='打印', shortcut='Ctrl+P', triggered=self.printDocument)
+        self.printReviewAction = QtWidgets.QAction(QtGui.QIcon(
+            'resource/print.png'), '打印预览', self, statusTip='打印预览', triggered=self.printReview)
 
     def closeEvent(self, event):
         if self.maybeSave():
@@ -268,7 +247,8 @@ class Notepad(QtWidgets.QMainWindow):
 
     def openFile(self):
         if self.maybeSave():
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, '', self.default_dir, '文本 (*.txt);;所有文件(*.*)')
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self, '', self.default_dir, '文本 (*.txt);;所有文件(*.*)')
             file = QtCore.QFile(filename)
             if not file.open(QtCore.QFile.ReadOnly | QtCore.QFile.Text):
                 return
@@ -287,7 +267,8 @@ class Notepad(QtWidgets.QMainWindow):
         return success
 
     def saveAsFile(self):
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, '', self.default_dir + '无标题', '文本 (*.txt);;所有文件(*.*)')
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, '', self.default_dir + '无标题', '文本 (*.txt);;所有文件(*.*)')
         # 如果取消保存，不要向下执行
         if not filename:
             return False
@@ -333,16 +314,20 @@ class Notepad(QtWidgets.QMainWindow):
         # 先在文本中进行查找，判断字符串是否存在
         index = context.find(text, start)
         if -1 == index:
-            QtWidgets.QMessageBox.information(self.find_dialog, '记事本', '找不到\"%s\"' % text)
+            QtWidgets.QMessageBox.information(
+                self.find_dialog, '记事本', '找不到\"%s\"' % text)
         else:
             start = index
             cursor = self.text.textCursor()
             cursor.clearSelection()
-            cursor.movePosition(QtGui.QTextCursor.Start, QtGui.QTextCursor.MoveAnchor)
+            cursor.movePosition(QtGui.QTextCursor.Start,
+                                QtGui.QTextCursor.MoveAnchor)
             # 向右多移动字符串长度
-            cursor.movePosition(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor, start + text_len)
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.MoveAnchor, start + text_len)
             # 同时anchor、position同时左移字符串长度
-            cursor.movePosition(QtGui.QTextCursor.Left, QtGui.QTextCursor.KeepAnchor, text_len)
+            cursor.movePosition(QtGui.QTextCursor.Left,
+                                QtGui.QTextCursor.KeepAnchor, text_len)
             cursor.selectedText()
             self.text.setTextCursor(cursor)
 
@@ -365,14 +350,18 @@ class Notepad(QtWidgets.QMainWindow):
                 self.replaceText()
                 return
         if -1 == index:
-            QtWidgets.QMessageBox.information(self.replace_dialog, '记事本', '找不到\"%s\"' % text)
+            QtWidgets.QMessageBox.information(
+                self.replace_dialog, '记事本', '找不到\"%s\"' % text)
         else:
             start = index
             cursor = self.text.textCursor()
             cursor.clearSelection()
-            cursor.movePosition(QtGui.QTextCursor.Start, QtGui.QTextCursor.MoveAnchor)
-            cursor.movePosition(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor, start + text_len)
-            cursor.movePosition(QtGui.QTextCursor.Left, QtGui.QTextCursor.KeepAnchor, text_len)
+            cursor.movePosition(QtGui.QTextCursor.Start,
+                                QtGui.QTextCursor.MoveAnchor)
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.MoveAnchor, start + text_len)
+            cursor.movePosition(QtGui.QTextCursor.Left,
+                                QtGui.QTextCursor.KeepAnchor, text_len)
             cursor.selectedText()
             self.text.setTextCursor(cursor)
 
@@ -388,7 +377,7 @@ class Notepad(QtWidgets.QMainWindow):
         # curs.removeSelectedText()
         curs.insertText(new_context)
 
-    def print(self):
+    def printDocument(self):
         document = self.text.document()
         printer = QPrinter()
         dlg = QPrintDialog(printer, self)
@@ -396,6 +385,16 @@ class Notepad(QtWidgets.QMainWindow):
             return
         document.print_(printer)
         self.statusBar().showMessage("打印成功", 2000)
+
+    def printReview(self):
+        printer = QPrinter(QPrinter.HighResolution)
+        review = QPrintPreviewDialog(printer, self)
+        review.setWindowFlags(QtCore.Qt.Window)
+        review.paintRequested.connect(self.print)
+        review.exec_()
+
+    def print(self, printer):
+        self.text.print_(printer)
 
     def replace(self):
         self.replace_dialog = QtWidgets.QDialog(self)
@@ -444,9 +443,12 @@ class Notepad(QtWidgets.QMainWindow):
             alert = QtWidgets.QMessageBox(self)
             alert.setWindowTitle('记事本')
             alert.setText('是否将更改保存到 %s ？' % self.cur_file)
-            saveButton = alert.addButton('保存', QtWidgets.QMessageBox.ActionRole)
-            unSaveButton = alert.addButton('不保存', QtWidgets.QMessageBox.ActionRole)
-            cancelButton = alert.addButton('取消', QtWidgets.QMessageBox.ActionRole)
+            saveButton = alert.addButton(
+                '保存', QtWidgets.QMessageBox.ActionRole)
+            unSaveButton = alert.addButton(
+                '不保存', QtWidgets.QMessageBox.ActionRole)
+            cancelButton = alert.addButton(
+                '取消', QtWidgets.QMessageBox.ActionRole)
             alert.exec_()
 
             ret = alert.clickedButton()
